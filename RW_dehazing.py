@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 from net.vae import VAE
 import numpy as np
-from net.Net import My_Net
+from net.Net import Net
 from options import options
 
 def get_dark_channel(image, w=15):
@@ -77,7 +77,8 @@ class Dehaze(object):
         self.learning_rate = opt.learning_rate
         self.parameters = None
         self.current_result = None
-        self.output_path = "output/" + opt.datasets + '/' + opt.name + '/'
+        #self.output_path = "output/" + opt.datasets + '/' + opt.name + '/'
+        self.output_path = "./output/"
 
         self.data_type = torch.cuda.FloatTensor
         self.clip = opt.clip
@@ -109,11 +110,11 @@ class Dehaze(object):
         self.image_torch = np_to_torch(self.image).type(torch.cuda.FloatTensor)
 
     def _init_nets(self):
-        image_net = My_Net(out_channel=3)
+        image_net = Net(out_channel=3)
 
         self.image_net = image_net.type(self.data_type)
 
-        mask_net = My_Net(out_channel=1)
+        mask_net = Net(out_channel=1)
 
         self.mask_net = mask_net.type(self.data_type)
 
@@ -207,6 +208,7 @@ class Dehaze(object):
 
     def finalize(self, steps=800):
 
+        print(self.output_path)
         if not os.path.exists(self.output_path):
             os.mkdir(self.output_path)
             os.mkdir(self.output_path + 'Normal/')
@@ -234,20 +236,42 @@ class Dehaze(object):
 
 
 def dehazing(opt):
+    # opt.num_iter = 2400
+    print(opt)
+
     torch.cuda.set_device(opt.cuda)
 
-    hazy_add = 'data/' + opt.datasets + '/*.jpg'
+    #hazy_add = 'data/' + opt.datasets + '/*.jpg'
+    # hazy_add = 'data/' + '/*.jpg'
+    # hazy_list = glob.glob("./data/*.jpg")
 
-    for item in sorted(glob.glob(hazy_add)):
+    # HAZY_PATH = "E:/Hazy Dataset Benchmark/I-HAZE/hazy/"
+    # hazy_list = glob.glob(HAZY_PATH + "*.jpg")
+
+    # HAZY_PATH = "E:/Hazy Dataset Benchmark/OTS_BETA/haze/"
+    # hazy_list = glob.glob(HAZY_PATH + "*0.95_0.2.jpg")  # specify atmosphere intensity
+
+    HAZY_PATH = "E:/Hazy Dataset Benchmark/RESIDE-Unannotated/"
+    hazy_list = glob.glob(HAZY_PATH + "*.jpeg")
+    # print(hazy_list)
+
+    # stopped at 8838_0
+    hazy_list = hazy_list[475:]
+    print(hazy_list[0])
+
+    for item in sorted(hazy_list):
         print(item)
-        name = item.split('.')[0].split('/')[2]
+        #name = item.split('.')[0].split('/')[2]
+        name = item.split("\\")[-1].split(".")[0]
         print(name)
-        
+
         hazy_img = prepare_image(item)
-        
+
         dh = Dehaze(name, hazy_img, opt)
         dh.optimize()
         dh.finalize()
+
+    # os.system("shutdown /s /t 1")
     
 if __name__ == "__main__":
     dehazing(options)
